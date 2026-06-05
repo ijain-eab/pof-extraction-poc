@@ -86,7 +86,7 @@ curl http://localhost:8000/health
 | `API_KEY`           | recommended     | –                           | Must equal the `x-api-key` header the Named Credential sends. |
 | `LLM_PROVIDER`      | no              | `gemini`                    | `gemini` or `claude`. |
 | `GEMINI_API_KEY`    | if gemini       | –                           | Free tier key from Google AI Studio. |
-| `GEMINI_MODEL`      | no              | `gemini-2.0-flash`          | |
+| `GEMINI_MODEL`      | no              | `gemini-2.5-flash`          | |
 | `ANTHROPIC_API_KEY` | if claude       | –                           | |
 | `CLAUDE_MODEL`      | no              | `claude-3-5-sonnet-latest`  | |
 | `MAX_FILE_MB`       | no              | `10`                        | |
