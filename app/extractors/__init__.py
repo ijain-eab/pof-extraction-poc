@@ -6,9 +6,9 @@ from app.config import settings
 from .base import Extractor
 
 
-@lru_cache(maxsize=1)
-def get_extractor() -> Extractor:
-    provider = settings.llm_provider
+@lru_cache(maxsize=4)
+def get_extractor(provider: str | None = None) -> Extractor:
+    provider = (provider or settings.llm_provider).strip().lower()
     if provider == "gemini":
         from .gemini import GeminiExtractor
 
@@ -18,7 +18,7 @@ def get_extractor() -> Extractor:
 
         return ClaudeExtractor()
     raise RuntimeError(
-        f"Unknown LLM_PROVIDER '{provider}'. Use 'gemini' or 'claude'."
+        f"Unknown LLM provider '{provider}'. Use 'gemini' or 'claude'."
     )
 
 

@@ -20,7 +20,8 @@ from pydantic import BaseModel, Field
 from app import __version__
 from app.anchors import build_anchor_checks
 from app.config import settings
-from app.extractors import get_extractor
+from app.extractors import Extractor, get_extractor
+from app.retry import call_with_retries, is_transient_error
 from app.schema import ExtractedFields
 
 logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(message)s")
@@ -65,6 +66,49 @@ def _extract_raw_text(pdf_bytes: bytes) -> str:
         return ""
 
 
+def _extract_with_resilience(
+    pdf_bytes: bytes, file_name: str, request_id: str
+) -> tuple[Extractor, ExtractedFields]:
+    """Run extraction with backoff retries, falling over to the fallback provider on
+    transient failures (e.g. a Gemini 503 fails over to Claude when configured)."""
+    providers: list[str] = [settings.llm_provider]
+    if settings.llm_fallback_provider and settings.llm_fallback_provider not in providers:
+        providers.append(settings.llm_fallback_provider)
+
+    last_exc: Exception | None = None
+    for index, provider in enumerate(providers):
+        is_last = index == len(providers) - 1
+        try:
+            extractor = get_extractor(provider)
+        except Exception as exc:
+            last_exc = exc
+            logger.warning("request_id=%s event=provider_init_failed provider=%s error=%s",
+                           request_id, provider, exc)
+            if is_last:
+                raise HTTPException(status_code=500, detail=f"Extractor not configured: {exc}") from exc
+            continue
+
+        try:
+            fields = call_with_retries(
+                lambda: extractor.extract(pdf_bytes, file_name),
+                attempts=settings.extract_max_retries,
+                base_ms=settings.extract_retry_base_ms,
+                label=f"{request_id}:{provider}",
+            )
+            return extractor, fields
+        except Exception as exc:
+            last_exc = exc
+            logger.exception("request_id=%s event=extraction_failed provider=%s", request_id, provider)
+            if not is_last and is_transient_error(exc):
+                logger.warning("request_id=%s event=failover from=%s to=%s",
+                               request_id, provider, providers[index + 1])
+                continue
+            raise HTTPException(status_code=502, detail=f"Extraction failed: {exc}") from exc
+
+    # Should not reach here, but keep mypy/readers happy.
+    raise HTTPException(status_code=502, detail=f"Extraction failed: {last_exc}")
+
+
 @app.post("/extract-fields", response_model=ExtractResponse)
 def extract_fields(
     payload: ExtractRequest,
@@ -97,17 +141,7 @@ def extract_fields(
             detail=f"PDF exceeds max allowed size of {settings.max_file_mb} MB.",
         )
 
-    try:
-        extractor = get_extractor()
-    except Exception as exc:
-        logger.exception("request_id=%s event=provider_init_failed", request_id)
-        raise HTTPException(status_code=500, detail=f"Extractor not configured: {exc}") from exc
-
-    try:
-        fields = extractor.extract(pdf_bytes, payload.fileName)
-    except Exception as exc:
-        logger.exception("request_id=%s event=extraction_failed", request_id)
-        raise HTTPException(status_code=502, detail=f"Extraction failed: {exc}") from exc
+    extractor, fields = _extract_with_resilience(pdf_bytes, payload.fileName, request_id)
 
     raw_text = _extract_raw_text(pdf_bytes)
     anchor_checks = build_anchor_checks(raw_text, fields)
