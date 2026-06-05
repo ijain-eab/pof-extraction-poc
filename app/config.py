@@ -18,7 +18,7 @@ class Settings:
 
     # Gemini
     gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
-    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     # Claude (optional)
     anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
