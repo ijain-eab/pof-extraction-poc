@@ -1,9 +1,0 @@
-fastapi>=0.110
-uvicorn[standard]>=0.29
-gunicorn>=21.2
-pydantic>=2.6
-google-genai>=0.3
-pypdf>=4.0
-python-dotenv>=1.0
-# Optional: only needed if LLM_PROVIDER=claude
-anthropic>=0.39
