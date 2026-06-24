@@ -16,7 +16,33 @@ TEMPLATE ANCHORS (use these to locate fields reliably)
 - "Attn:" -> customer_attn_name; the lines beneath it (street / city, state ZIP) -> customer_address.
 - The "Date:" near the top of the form -> contract_created_date (this is when the form was created).
 - "Program Scope available here:" is followed by one or more "<Program> - <URL>" lines -> product_links.
-- "Program Term: <start> - <end>" -> program_terms[].start_date / end_date (there can be several terms).
+- "Program Term: <start> - <end>" -> one program_terms[] entry per term (there can be several).
+  Set program_terms[].total_fee to the term's printed GROUP TOTAL exactly as shown (the "Total" row) and
+  total_fee's currency in `currency`; NEVER compute or sum it yourself, and do NOT assume the group total
+  equals the sum of the visible line amounts.
+  PRODUCT ROWS -> line_items[]: capture EVERY row of the term's product table in top-to-bottom reading order.
+  For each row:
+    * program: the row name exactly as printed.
+    * item_id: a sequential id unique within the term, in reading order ("i1","i2","i3",...). Assign to every row.
+    * parent_id / parent_name: the id and name of the row this row is visually nested UNDER (its container —
+      the less-indented row above that it belongs to). Top-level products use "" for both. Decide the parent
+      from the printed indentation/grouping, NOT by subtracting from indent_level — a more-indented row can sit
+      under another row that prints at the same apparent level, and trees can be deeper than 3.
+    * indent_level: how deeply the row is indented (1 = outermost product, 2 = sub, 3 = sub-sub, deeper if
+      shown). Informational only; do not use it to choose the parent.
+    * fee + currency: the dollar amount printed ON THAT ROW, on whichever row shows it — it may be the
+      top-level product, a fee sub-row (e.g. "Administrative & Travel Fee"), or a child even when its parent
+      shows NO amount. Leave "" when the row shows no amount. Do NOT assume only top-level rows carry a fee.
+    * quantity: the count/volume printed on that row (e.g. "20,000 Inquiries", "5,001 Recipients",
+      "1 destinations", "Unlimited", "60,000 Names"). A row may show a quantity at ANY level (including a
+      top-level product). Leave "" when none.
+    * detail: the membership/config criteria on that row, verbatim (e.g.
+      "Grad Years:2027; 2028; 2029, States:MA, GPA Minimum:2.50, Zip Codes:select zip codes").
+  A single row may have an amount, a quantity, both, or neither — never force an amount onto the top row and
+  never drop a quantity that sits on a parent. Emit repeated identical sibling rows SEPARATELY (e.g. two
+  "Administrative & Travel Fee" lines under the same parent), each with its own item_id; never de-duplicate.
+  Do NOT pull rows from the "One Time Fee", "Estimates and Passthroughs", or "Exhibit A: Supplemental Fees"
+  tables into line_items — those have their own fields.
 - "made pursuant to the Master Agreement dated as of <date>" -> master_agreement_date.
 - The "Invoicing:" paragraph -> invoicing_terms (verbatim). Map invoice_frequency to EXACTLY one of these
   Salesforce picklist values (use the exact spelling, or null if it cannot be determined):
@@ -58,10 +84,46 @@ OPT-OUT / TERMINATION
 - Capture any explicit opt-out / termination deadline date in opt_out_date (ISO). If the clause states a penalty,
   early-termination fee, or amount due on opt-out, capture it verbatim in opt_out_penalty_amount; otherwise null.
 
-SUPPLEMENTAL FEES
-- If the document contains a "Supplemental Fees" statement, exhibit, or section, set supplemental_fees_present = true
+SUPPLEMENTAL FEES (body statement)
+- If the document body contains a "Supplemental Fees" statement, set supplemental_fees_present = true
   and capture its text verbatim in supplemental_fees_statement. Otherwise set supplemental_fees_present = false and
-  return null for the statement.
+  return null for the statement. (This is the prose statement; the Exhibit A rate table below is captured separately.)
+
+ONE-TIME FEE (section heading "One Time Fee:" or "One-Time Fee")
+- A standalone fee table, separate from the recurring Program and Program Fees, usually for an Implementation Fee.
+- It is grouped under a "Program Term: <start> - <end>" header and ends with a "Total" row. Return one entry per
+  term in one_time_fees[]: set start_date / end_date from that header; put each fee line in line_items[] (program
+  name e.g. "Navigate - 4 Year" in `program`, the fee label e.g. "Implementation Fee" in `detail`, the amount in
+  `fee`, the currency in `currency`); put the table's "Total" amount in total_fee. If there is no one-time fee
+  section, return [].
+- Do NOT also put one-time fees into program_terms; recurring annual fees stay in program_terms and one-time fees
+  go only in one_time_fees.
+
+ESTIMATES & PASSTHROUGHS (section heading "Estimates and Passthroughs:")
+- Estimated third-party / passthrough costs, grouped per "Program Term: <start> - <end>", typically the categories
+  "Estimated Postage Costs", "Estimated Media Costs", "Estimated List Costs" (there is usually no Total row).
+- Also capture any embedded per-year "Estimated Postage and Media" tables that appear inside the fees area the
+  same way. Return one entry per term in estimates_passthroughs[]: set start_date / end_date from the header and
+  put each category line in items[] (the category text in `label`, the amount in `fee`, currency in `currency`).
+  If there are no estimates/passthroughs, return [].
+
+EXHIBIT A: SUPPLEMENTAL FEES (per-unit overage rate schedule)
+- Near the end of the document, "Exhibit A: Supplemental Fees" lists the per-unit rates to add volume above what is
+  included in the Program tables. It is grouped per "Program Term: <start> - <end>", and for each program lists rate
+  lines such as "Additional Program", "Additional Postage", "Additional Media".
+- Return one entry per term in supplemental_fee_schedule[]: set start_date / end_date from the header; put each rate
+  line in entries[] with `program` (the program the rate applies to), `fee_type` (e.g. "Additional Program"),
+  `amount` (the printed rate, e.g. "4,940.00"), `currency`, and `unit` EXACTLY as printed: "/M" (per 1,000) or
+  "/C" (per 100). If there is no Exhibit A, return [].
+- This schedule is DISTINCT from the body supplemental_fees_statement above; capture both independently.
+
+BILLING INFO (section heading "OPTIONAL FOR BILLING PURPOSES ONLY")
+- This block has labeled lines, usually followed by blank underscores: "Invoices should be sent ... to this Email
+  Address", "Billing Contact Name", "Billing Contact Email Address", "Billing Contact Phone", and
+  "Purchase Order No. (if applicable)".
+- Populate billing_info from any values actually written on these lines. Treat a line that contains only blank
+  underscores ("______") or no value as NOT filled and return null for that field (same rule as signature
+  placeholders). If the whole block is blank, return billing_info with all fields null.
 
 ADD-ON / NON-STANDARD PARAGRAPHS
 - About 90% of the body is the fixed template. Identify any paragraph that is NOT part of the standard template -
