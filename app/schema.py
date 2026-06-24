@@ -22,9 +22,9 @@ class Address(BaseModel):
     zip: Optional[str] = Field(None, description="Postal / ZIP code")
 
 
-class ProductLink(BaseModel):
-    program_name: Optional[str] = Field(None, description="Program / product name, e.g. 'Appily Leads'")
-    url: Optional[str] = Field(None, description="The Program Scope URL for that product")
+class ScopeLink(BaseModel):
+    program_name: Optional[str] = Field(None, description="Program / product name the scope link is for, e.g. 'Appily Leads', 'Virtual Tour', 'Seramount Consulting'")
+    url: Optional[str] = Field(None, description="The Program Scope link URL for that product, captured verbatim from the visible link text (keep the scheme, http:// or https://)")
 
 
 class LineItem(BaseModel):
@@ -111,8 +111,8 @@ class ExtractedFields(BaseModel):
     customer_attn_name: Optional[str] = Field(None, description="Contact name from the 'Attn:' line")
     customer_address: Optional[Address] = Field(None, description="Customer mailing address")
 
-    # Products
-    product_links: List[ProductLink] = Field(default_factory=list, description="Program Scope product links")
+    # Scope links (Program Scope URLs)
+    scope_links: List[ScopeLink] = Field(default_factory=list, description="Program Scope links, one entry per '<Program> - <URL>' line under 'Program Scope available here:'")
 
     # Dates
     contract_created_date: Optional[str] = Field(None, description="The 'Date:' near the top of the form (ISO)")

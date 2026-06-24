@@ -15,7 +15,9 @@ TEMPLATE ANCHORS (use these to locate fields reliably)
 - "Organization:" -> customer_organization.
 - "Attn:" -> customer_attn_name; the lines beneath it (street / city, state ZIP) -> customer_address.
 - The "Date:" near the top of the form -> contract_created_date (this is when the form was created).
-- "Program Scope available here:" is followed by one or more "<Program> - <URL>" lines -> product_links.
+- "Program Scope available here:" is followed by one or more "<Program> - <URL>" lines -> scope_links
+  (one entry per line: the product name in `program_name`, and the visible link URL verbatim in `url`,
+  keeping its scheme; use the URL shown as the link text, not any redirect/safelink wrapper).
 - "Program Term: <start> - <end>" -> one program_terms[] entry per term (there can be several).
   Set program_terms[].total_fee to the term's printed GROUP TOTAL exactly as shown (the "Total" row) and
   total_fee's currency in `currency`; NEVER compute or sum it yourself, and do NOT assume the group total
