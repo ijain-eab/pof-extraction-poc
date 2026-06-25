@@ -122,6 +122,7 @@ class ExtractedFields(BaseModel):
     # Signatures
     eab_signer_name: Optional[str] = Field(None, description="EAB/Seramount signer name (usually preprinted)")
     eab_signed_date: Optional[str] = Field(None, description="Date signed by EAB/Seramount (ISO)")
+    eab_signature_present: Optional[bool] = Field(None, description="True if the EAB/Seramount block shows an actual signature mark/image (usually preprinted); False if the signature line is blank")
     customer_signer_name: Optional[str] = Field(None, description="Actual customer signer name; null if only the {{Signer1_Name}} placeholder is present")
     customer_signer_title: Optional[str] = Field(None, description="Customer signer title; null if only the placeholder is present")
     customer_signed_date: Optional[str] = Field(None, description="Date the customer signed (ISO); null if unsigned")
@@ -151,5 +152,6 @@ class ExtractedFields(BaseModel):
     is_signed: Optional[bool] = Field(None, description="True only if a real customer signature/name/date is present (not the placeholder)")
     additional_terms: Optional[str] = Field(None, description="Verbatim 'Additional Terms' / modifications text, if any")
     additional_paragraphs: List[str] = Field(default_factory=list, description="Each add-on / non-standard / negotiated paragraph that is NOT part of the standard template, returned as a separate verbatim string")
+    legal_paragraphs: List[str] = Field(default_factory=list, description="EVERY legal/terms body paragraph (Invoicing, Opt-Out/termination, the 'made pursuant to the Master Agreement' clause, Additional Terms, and any negotiated/inserted language) VERBATIM, each as a separate string. Exclude page headers/footers, the Program/One-Time/Estimates/Exhibit-A fee tables, the signature block, and the billing block. Do NOT paraphrase, summarize, reorder, or merge clauses.")
     low_confidence_fields: List[str] = Field(default_factory=list, description="Names of fields the model is unsure about")
     extraction_notes: Optional[str] = Field(None, description="Any caveats about the extraction")

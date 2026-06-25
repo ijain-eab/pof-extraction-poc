@@ -59,7 +59,9 @@ TEMPLATE ANCHORS (use these to locate fields reliably)
 
 SIGNATURES (very important - these documents are signed via DocuSign)
 - The EAB/Seramount side is usually preprinted: name "Gregory Quantz", title "Managing Director",
-  and a Date -> eab_signer_name / eab_signed_date.
+  and a Date -> eab_signer_name / eab_signed_date. Set eab_signature_present = true if an actual
+  signature mark/image is shown on the EAB signature line (usually preprinted); false if that line
+  is blank.
 - The CUSTOMER side often still shows literal placeholder tokens such as "{{Signer1_Name}}",
   "{{Signer1_Title}}", "{{Signer1_Date}}", "{{Signer1_Signature}}". These mean the field is NOT filled.
   If you only see a placeholder token, return null for that field and set is_signed = false.
@@ -126,6 +128,18 @@ BILLING INFO (section heading "OPTIONAL FOR BILLING PURPOSES ONLY")
 - Populate billing_info from any values actually written on these lines. Treat a line that contains only blank
   underscores ("______") or no value as NOT filled and return null for that field (same rule as signature
   placeholders). If the whole block is blank, return billing_info with all fields null.
+
+LEGAL / TERMS PARAGRAPHS (for term-by-term validation)
+- Return EVERY legal/terms body paragraph as a SEPARATE, VERBATIM string in legal_paragraphs: the
+  Invoicing prose, the Opt-Out / termination clause, the "made pursuant to the Master Agreement dated
+  as of ..." paragraph, the fee/termination boilerplate, Additional Terms, and any negotiated or
+  inserted language.
+- Copy each paragraph EXACTLY as printed — do NOT paraphrase, summarize, reorder, or merge separate
+  clauses (the text is matched verbatim against CPQ Quote Term bodies downstream).
+- EXCLUDE non-prose: page headers/footers (e.g. "PROPOSAL | Q-######", "Page X of Y"), the Program /
+  One-Time Fee / Estimates / Exhibit A fee tables, the signature block, and the
+  "OPTIONAL FOR BILLING PURPOSES ONLY" billing block.
+- legal_paragraphs is the FULL body set; additional_paragraphs remains only the non-standard subset.
 
 ADD-ON / NON-STANDARD PARAGRAPHS
 - About 90% of the body is the fixed template. Identify any paragraph that is NOT part of the standard template -
