@@ -122,10 +122,11 @@ class ExtractedFields(BaseModel):
     # Signatures
     eab_signer_name: Optional[str] = Field(None, description="EAB/Seramount signer name (usually preprinted)")
     eab_signed_date: Optional[str] = Field(None, description="Date signed by EAB/Seramount (ISO)")
-    eab_signature_present: Optional[bool] = Field(None, description="True if the EAB/Seramount block shows an actual signature mark/image (usually preprinted); False if the signature line is blank")
+    eab_signature_present: bool = Field(False, description="REQUIRED boolean — ALWAYS return true or false, NEVER null. True ONLY if an actual handwritten/graphical signature mark or signature image is rendered on the EAB/Seramount signature line. Judge SOLELY by whether a signature graphic/ink stroke is visible — you do NOT need to read or recognize the name. False if the line is blank or shows only typed text / a placeholder.")
     customer_signer_name: Optional[str] = Field(None, description="Actual customer signer name; null if only the {{Signer1_Name}} placeholder is present")
     customer_signer_title: Optional[str] = Field(None, description="Customer signer title; null if only the placeholder is present")
     customer_signed_date: Optional[str] = Field(None, description="Date the customer signed (ISO); null if unsigned")
+    customer_signature_present: bool = Field(False, description="REQUIRED boolean — ALWAYS return true or false, NEVER null. True ONLY if an actual handwritten/graphical signature mark or DocuSign-applied signature image is rendered on the CUSTOMER signature line. Judge SOLELY by whether a signature graphic is visible — you do NOT need to read the name. A typed/printed name, a blank line, or a literal {{Signer1_Signature}} placeholder is NOT a signature mark -> false.")
 
     # Commercials
     program_terms: List[ProgramTerm] = Field(default_factory=list, description="One entry per Program Term block")

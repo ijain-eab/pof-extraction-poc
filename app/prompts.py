@@ -58,13 +58,22 @@ TEMPLATE ANCHORS (use these to locate fields reliably)
 - "PROPOSAL | Q-######" (page footer) -> proposal_number.
 
 SIGNATURES (very important - these documents are signed via DocuSign)
-- The EAB/Seramount side is usually preprinted: name "Gregory Quantz", title "Managing Director",
-  and a Date -> eab_signer_name / eab_signed_date. Set eab_signature_present = true if an actual
-  signature mark/image is shown on the EAB signature line (usually preprinted); false if that line
-  is blank.
-- The CUSTOMER side often still shows literal placeholder tokens such as "{{Signer1_Name}}",
-  "{{Signer1_Title}}", "{{Signer1_Date}}", "{{Signer1_Signature}}". These mean the field is NOT filled.
-  If you only see a placeholder token, return null for that field and set is_signed = false.
+- eab_signature_present and customer_signature_present are REQUIRED booleans: ALWAYS return true or
+  false, NEVER null, even when uncertain (the GENERAL "return null if missing" rule does NOT apply to
+  these two fields). Judge them SOLELY by whether an actual signature GRAPHIC is rendered on the
+  signature line - a handwritten/cursive ink stroke, a signature image, or a DocuSign-applied signature
+  mark. You do NOT need to read or recognize the name inside the signature; you only need to determine
+  whether a signature mark is present. A blank line, a typed/printed name with no graphic, or a literal
+  "{{Signer1_Signature}}" placeholder is NOT a signature -> false.
+- EAB/Seramount side: the block is usually preprinted (name "Gregory Quantz", title "Managing Director",
+  and a Date) -> eab_signer_name / eab_signed_date. Set eab_signature_present = true when a signature
+  graphic is shown on the EAB signature line; false only if it is genuinely blank.
+- CUSTOMER side: set customer_signature_present = true ONLY if a signature graphic is rendered on the
+  customer signature line; false otherwise. This is independent of the name - judge the graphic only.
+- is_signed is SEPARATE from the signature-present flags: it is name/date based. The CUSTOMER side often
+  shows literal placeholder tokens such as "{{Signer1_Name}}", "{{Signer1_Title}}", "{{Signer1_Date}}",
+  "{{Signer1_Signature}}". These mean the field is NOT filled. If you only see a placeholder token,
+  return null for that field and set is_signed = false.
 - When a document IS signed, the customer's real name, title and signed date may appear OUT OF PLACE -
   for example jammed onto the DocuSign footer line (e.g. "...Docusign Envelope ID: ABC123President6/1/2026Greg Weiner"),
   or interleaved character-by-character with the placeholder. Read the document visually/spatially to
